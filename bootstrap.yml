@@ -1,0 +1,9 @@
+---
+- hosts: bootstrap
+  name: bootstrap all the hosts in bootstrap group
+  vars: 
+    createuser: 'k8s'
+    createpassword: 'yourpassword'
+  become: yes
+  roles:
+   - init

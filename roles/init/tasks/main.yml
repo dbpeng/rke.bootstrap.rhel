@@ -1,0 +1,59 @@
+---
+# make the environment docker ready
+ - name: update the repos
+   yum: name=* state=latest
+   sudo: true
+
+ - name: make sure epel is installed
+   yum: name=epel-release state=latest  
+
+ - name: install necessary yum packages
+   yum: name={{item}} state=latest
+   with_items:
+    - git
+    - docker
+
+ - name: Make sure docker is running
+   service: name=docker state=started
+ 
+ - name: create user
+   command: useradd -m {{createuser}} creates=/home/{{createuser}}
+  
+ - name: setup password
+   shell: usermod -p $(echo '{{createpassword}}' | openssl passwd -1 -stdin) {{createuser}}
+
+ - name: uploading authorize key
+   authorized_key:
+    user={{createuser}}
+    key="{{lookup('file', '~/.ssh/id_rsa.pub')}}"
+    path='/home/{{createuser}}/.ssh/authorized_keys'
+    manage_dir=no 
+
+ - name: update sudoers
+   lineinfile:
+    dest=/etc/sudoers
+    insertafter=EOF
+    line='{{createuser}} ALL=(ALL) NOPASSWD:ALL'
+    regexp='{{createuser}} ALL=(ALL) NOPASSWD:ALL'
+    state=present
+ 
+ - name: add docker group
+   group:
+    name: docker
+    state: present
+ 
+ - name: add user into docker group
+   command: usermod -a -G docker {{createuser}}
+
+ - name: udpate attribute
+   lineinfile:
+    dest=/usr/lib/systemd/system/docker.service
+    insertbefore='^[install]'
+    line='MountFlags=shared'
+    regexp='MountFlags=shared'
+    state=present
+ 
+ - name: restart docker
+   service:
+    name: docker
+    state: restarted
